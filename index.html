@@ -7,11 +7,12 @@
   <title>ChatMaply — Group Chats to Maps</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.134/Build/Cesium/Widgets/widgets.css">
 </head>
 <body>
   <header class="topbar"><div class="brand"><span class="brand-mark">⌖</span><span>ChatMaply</span></div><div class="tagline">Group chats → simple maps</div></header>
   <main class="container">
-    <section class="hero"><div><p class="eyebrow">BUILD-04 • LOCATION</p><h1>Turn a group chat into a map.</h1><p class="lead">Upload an exported chat with its media, or share your observer location with explicit permission.</p></div><div class="privacy-note"><strong>Privacy first</strong><br>Location is requested only after you choose to share it. The prototype keeps observer and object locations separate.</div></section>
+    <section class="hero"><div><p class="eyebrow">BUILD-13 • 3D GLOBE</p><h1>Turn a group chat into a map.</h1><p class="lead">Upload an exported chat with its media, or share your observer location with explicit permission.</p></div><div class="privacy-note"><strong>Privacy first</strong><br>Location is requested only after you choose to share it. Observer and object locations remain separate.</div></section>
     <section class="upload-card" aria-labelledby="upload-title">
       <h2 id="upload-title">1. Upload exported group chat</h2><p class="muted">For the best result, export the chat <strong>with media</strong>.</p>
       <label class="dropzone" id="dropzone" for="chatFile"><input id="chatFile" type="file" accept=".zip,.txt,.json,.html" hidden><span class="upload-icon">↑</span><strong>Choose chat export</strong><span>ZIP, TXT, JSON or HTML</span></label>
@@ -25,14 +26,15 @@
       <p class="help" id="locationStatus">No observer location shared yet.</p>
     </section>
     <section class="workspace" aria-label="ChatMaply map workspace">
-      <div class="map-panel"><div class="panel-head"><div><h2>3. Map</h2><span id="statusText">Demo observations are shown until a chat is processed.</span></div><button class="secondary" id="fitMap">Fit observations</button></div><div id="map"></div></div>
+      <div class="map-panel"><div class="panel-head"><div><h2>3. Map</h2><span id="statusText">Demo observations are shown until a chat is processed.</span></div><div><button class="secondary" id="fitMap">Fit observations</button> <button class="secondary" id="toggleGlobe">3D Globe</button></div></div><div id="map"></div><div id="globe" hidden style="height:520px"></div></div>
       <aside class="side-panel"><div class="stats"><div><strong id="messageCount">6</strong><span>Messages</span></div><div><strong id="mediaCount">4</strong><span>Media</span></div><div><strong id="observerCount">3</strong><span>Observers</span></div><div><strong id="obsCount">3</strong><span>Mapped reports</span></div></div><div class="legend"><h3>Map legend</h3><p><span class="dot observer"></span> Observer location</p><p><span class="dot object"></span> Object / event</p><p><span class="dot estimated"></span> Estimated location</p></div><div class="timeline"><h3>Time</h3><input id="timeRange" type="range" min="0" max="100" value="100"><div class="time-labels"><span>Earlier</span><span id="timeValue">All</span><span>Latest</span></div></div><div class="observation" id="observationCard"><h3>Selected report</h3><p class="muted">Click a map marker to view evidence.</p></div></aside>
     </section>
     <section class="how-it-works"><h2>How ChatMaply works</h2><div class="steps"><div><b>01</b><h3>Export</h3><p>Export a group chat from your messaging app with media.</p></div><div><b>02</b><h3>Locate</h3><p>Share observer location only when you choose. The OS supplies positioning and accuracy.</p></div><div><b>03</b><h3>Map</h3><p>Messages and media become evidence records; observer and object locations stay separate.</p></div></div></section>
   </main>
-  <footer>ChatMaply • BUILD-04 • Prototype</footer>
+  <footer>ChatMaply • BUILD-13 • Prototype</footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.134/Build/Cesium/Cesium.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
