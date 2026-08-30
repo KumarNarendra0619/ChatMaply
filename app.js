@@ -3,6 +3,9 @@ import { requestObserverLocation, createObserverLocation } from './location/loca
 import { initGlobe, renderGlobeObservations } from './terrain/globe-view.js';
 import { ingestExport } from './data/evidence-store.js';
 import { buildObservations } from './data/observation-builder.js';
+import { buildEntityTimeline, summarizeConditionHistory } from './temporal/entity-history.js';
+import { createInteractionIndex, getObservationContext, createMapJump } from './ui/evidence-linker.js';
+import { renderEvidencePanel } from './ui/evidence-panel.js';
 
 const demo = {
   observers: [
@@ -14,7 +17,7 @@ const demo = {
     {id:'W-001',type:'Waste dumping',lat:30.0881,lng:78.2714,accuracy:35,confidence:'High',time:'2026-08-30 08:45',distance:'480 m',elevation:1120,slope:'18°',evidence:'2 images + 1 video',condition:'Poor'},
     {id:'W-002',type:'Roadside waste',lat:30.091,lng:78.278,accuracy:65,confidence:'Estimated',time:'2026-08-30 09:15',distance:'620 m',elevation:1095,slope:'11°',evidence:'1 image',condition:'Moderate'},
     {id:'W-003',type:'Water pollution',lat:30.084,lng:78.269,accuracy:25,confidence:'High',time:'2026-08-30 10:08',distance:'310 m',elevation:1105,slope:'7°',evidence:'1 image + 2 messages',condition:'Poor'}
-  ]
+  ], messages:[1,2,3,4,5,6], media:[1,2,3,4]
 };
 
 const map = L.map('map', {zoomControl:true}).setView([30.0875,78.272], 15);
@@ -23,23 +26,28 @@ const observerLayer = L.layerGroup().addTo(map);
 const objectLayer = L.layerGroup().addTo(map);
 const allMarkers = [];
 let globeReady = false;
+let currentData = demo;
+let interactionIndex = createInteractionIndex(currentData);
 function observerIcon(){return L.divIcon({className:'custom-marker',html:'<div style="width:16px;height:16px;border-radius:50%;background:#2878c8;border:3px solid white;box-shadow:0 1px 5px #555"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
 function objectIcon(estimated=false){const c=estimated?'#d6a52b':'#d74c4c';return L.divIcon({className:'custom-marker',html:`<div style="width:17px;height:17px;border-radius:50%;background:${c};border:3px solid white;box-shadow:0 1px 5px #555"></div>`,iconSize:[17,17],iconAnchor:[8,8]});}
-function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time || o.timestamp || ''}</p><p>📍 ${Number(o.lat ?? o.latitude).toFixed(5)}, ${Number(o.lng ?? o.longitude).toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation ?? o.terrain?.elevation_m ?? 'Not available'}${o.slope ? ` • Slope: ${o.slope}` : (o.terrain?.slope_deg != null ? ` • Slope: ${o.terrain.slope_deg.toFixed(1)}°` : '')}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
+function escapeHtml(v=''){return String(v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\':'&#92;','"':'&quot;'}[c]));}
+function showObservation(o){
+  document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${escapeHtml(o.type||'Observation')}</div><p><strong>${escapeHtml(o.id||'')}</strong> • ${escapeHtml(o.time || o.timestamp || 'Time unknown')}</p><p>📍 ${Number(o.lat ?? o.latitude).toFixed(5)}, ${Number(o.lng ?? o.longitude).toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation ?? o.terrain?.elevation_m ?? 'Not available'}${o.slope ? ` • Slope: ${escapeHtml(o.slope)}` : (o.terrain?.slope_deg != null ? ` • Slope: ${Number(o.terrain.slope_deg).toFixed(1)}°` : '')}</p><p>↔ Distance from observer: ${escapeHtml(o.distance || 'Not available')}</p><p>Evidence: ${escapeHtml(o.evidence || 'Chat report')}</p><div class="chips"><span class="chip">${escapeHtml(o.confidence || 'Unverified')}</span><span class="chip">Object / event</span></div>`;
+  const context=getObservationContext(o.id,interactionIndex);
+  const timeline=buildEntityTimeline({entity_id:context?.entity_id||o.entity_id,evidence_ids:[o.id]},currentData.observations||[],currentData.lineages||[]);
+  const summary=summarizeConditionHistory(timeline);
+  document.getElementById('timelineCard').innerHTML=`<h3>Place history</h3><p>First: <strong>${escapeHtml(summary.first_condition)}</strong> · Latest: <strong>${escapeHtml(summary.latest_condition)}</strong> · Trend: <strong>${escapeHtml(summary.trend)}</strong></p>${timeline.map(e=>`<p>🕒 ${escapeHtml(e.timestamp||'Time unknown')} · ${escapeHtml(e.condition)}</p>`).join('')||'<p class="muted">No verified history available.</p>'}`;
+  renderEvidencePanel(document.getElementById('evidencePanel'),context);
+}
 function clearLayers(){observerLayer.clearLayers();objectLayer.clearLayers();allMarkers.length=0;}
 function renderData(data){
-  clearLayers();
-  (data.observers || []).forEach(u=>{const marker=L.marker([u.lat,u.lng],{icon:observerIcon()}).bindPopup(`<strong>Observer</strong><br>${u.name || 'Observer'}<br>Accuracy: ±${u.accuracy ?? u.accuracy_m ?? 'unknown'} m<br>${u.time || u.timestamp || ''}`);marker.addTo(observerLayer);allMarkers.push(marker);});
-  (data.observations || []).forEach(o=>{const lat=o.lat ?? o.latitude, lng=o.lng ?? o.longitude; if(!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return; const marker=L.marker([lat,lng],{icon:objectIcon(o.confidence==='Estimated')}).on('click',()=>showObservation(o)).bindPopup(`<strong>${o.type || 'Observation'}</strong><br>${o.time || o.timestamp || ''}<br>Accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m`);marker.addTo(objectLayer);allMarkers.push(marker);});
-  document.getElementById('observerCount').textContent=(data.observers||[]).length;
-  document.getElementById('obsCount').textContent=(data.observations||[]).length;
-  document.getElementById('messageCount').textContent=(data.messages||[]).length;
-  document.getElementById('mediaCount').textContent=(data.media||[]).length;
-  window.chatMaplyObservations = data.observations || [];
-  fit(); if(globeReady) renderGlobeObservations(window.chatMaplyObservations);
+  currentData=data; interactionIndex=createInteractionIndex(data); clearLayers();
+  (data.observers || []).forEach(u=>{const marker=L.marker([u.lat,u.lng],{icon:observerIcon()}).bindPopup(`<strong>Observer</strong><br>${escapeHtml(u.name || 'Observer')}<br>Accuracy: ±${u.accuracy ?? u.accuracy_m ?? 'unknown'} m<br>${escapeHtml(u.time || u.timestamp || '')}`);marker.addTo(observerLayer);allMarkers.push(marker);});
+  (data.observations || []).forEach(o=>{const lat=o.lat ?? o.latitude, lng=o.lng ?? o.longitude; if(!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return; const marker=L.marker([lat,lng],{icon:objectIcon(o.confidence==='Estimated')}).on('click',()=>{showObservation(o); const jump=createMapJump(o); if(jump) map.setView([jump.latitude,jump.longitude,],Math.max(map.getZoom(),16));}).bindPopup(`<strong>${escapeHtml(o.type || 'Observation')}</strong><br>${escapeHtml(o.time || o.timestamp || '')}<br>Accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m`);marker.addTo(objectLayer);allMarkers.push(marker);});
+  document.getElementById('observerCount').textContent=(data.observers||[]).length; document.getElementById('obsCount').textContent=(data.observations||[]).length; document.getElementById('messageCount').textContent=(data.messages||[]).length; document.getElementById('mediaCount').textContent=(data.media||[]).length; window.chatMaplyObservations=data.observations||[]; fit(); if(globeReady) renderGlobeObservations(window.chatMaplyObservations);
 }
 function fit(){if(allMarkers.length) map.fitBounds(L.featureGroup(allMarkers).getBounds().pad(0.18));}
-renderData({ ...demo, messages:[1,2,3,4,5,6], media:[1,2,3,4] });
+renderData(demo);
 document.getElementById('fitMap').addEventListener('click',fit);
 const toggleGlobe=document.getElementById('toggleGlobe');
 if(toggleGlobe) toggleGlobe.addEventListener('click',async()=>{const mapEl=document.getElementById('map'),globeEl=document.getElementById('globe'),showing=!globeEl.hidden;if(showing){globeEl.hidden=true;mapEl.hidden=false;toggleGlobe.textContent='3D Globe';map.invalidateSize();return;}globeEl.hidden=false;mapEl.hidden=true;toggleGlobe.textContent='2D Map';if(!globeReady){await initGlobe('globe');globeReady=true;}renderGlobeObservations(window.chatMaplyObservations||[]);});
