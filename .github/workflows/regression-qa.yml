@@ -19,15 +19,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run deterministic parser and evidence QA
+      - name: Run deterministic parser, evidence and workspace QA
         run: |
           node tests/BUILD-28-parser-qa.js
           node tests/BUILD-29-signal-qa.js
           node tests/BUILD-30-messenger-qa.js
           node tests/BUILD-31-e2e-import-qa.js
           node tests/BUILD-32-evidence-model-qa.js
+          node tests/BUILD-46-workspace-qa.js
 
-      - name: Run terrain and persistence QA
+      - name: Run terrain, pipeline and persistence QA
         run: |
           node tests/BUILD-37-elevation-qa.js
           node tests/BUILD-38-slope-qa.js
