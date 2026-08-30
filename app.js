@@ -1,5 +1,6 @@
 import { inspectChatZip } from './parsers/zip-import.js';
 import { requestObserverLocation, createObserverLocation } from './location/location-engine.js';
+import { initGlobe, renderGlobeObservations } from './terrain/globe-view.js';
 
 const demo = {
   observers: [
@@ -8,9 +9,9 @@ const demo = {
     {id:'u3',name:'Mohan',lat:30.0825,lng:78.2715,accuracy:9,time:'2026-08-30 10:05'}
   ],
   observations: [
-    {id:'W-001',type:'Waste dumping',lat:30.0881,lng:78.2714,accuracy:35,confidence:'High',time:'2026-08-30 08:45',distance:'480 m',elevation:'1,120 m',slope:'18°',evidence:'2 images + 1 video'},
-    {id:'W-002',type:'Roadside waste',lat:30.091,lng:78.278,accuracy:65,confidence:'Estimated',time:'2026-08-30 09:15',distance:'620 m',elevation:'1,095 m',slope:'11°',evidence:'1 image'},
-    {id:'W-003',type:'Water pollution',lat:30.084,lng:30.269,accuracy:25,confidence:'High',time:'2026-08-30 10:08',distance:'310 m',elevation:'1,105 m',slope:'7°',evidence:'1 image + 2 messages'}
+    {id:'W-001',type:'Waste dumping',lat:30.0881,lng:78.2714,accuracy:35,confidence:'High',time:'2026-08-30 08:45',distance:'480 m',elevation:1120,slope:'18°',evidence:'2 images + 1 video',condition:'Poor'},
+    {id:'W-002',type:'Roadside waste',lat:30.091,lng:78.278,accuracy:65,confidence:'Estimated',time:'2026-08-30 09:15',distance:'620 m',elevation:1095,slope:'11°',evidence:'1 image',condition:'Moderate'},
+    {id:'W-003',type:'Water pollution',lat:30.084,lng:78.269,accuracy:25,confidence:'High',time:'2026-08-30 10:08',distance:'310 m',elevation:1105,slope:'7°',evidence:'1 image + 2 messages',condition:'Poor'}
   ]
 };
 
@@ -19,10 +20,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, a
 const observerLayer = L.layerGroup().addTo(map);
 const objectLayer = L.layerGroup().addTo(map);
 const allMarkers = [];
+let globeReady = false;
 
 function observerIcon(){return L.divIcon({className:'custom-marker',html:'<div style="width:16px;height:16px;border-radius:50%;background:#2878c8;border:3px solid white;box-shadow:0 1px 5px #555"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
 function objectIcon(estimated=false){const c=estimated?'#d6a52b':'#d74c4c';return L.divIcon({className:'custom-marker',html:`<div style="width:17px;height:17px;border-radius:50%;background:${c};border:3px solid white;box-shadow:0 1px 5px #555"></div>`,iconSize:[17,17],iconAnchor:[8,8]});}
-function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time}</p><p>📍 ${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation || 'Not available'} • Slope: ${o.slope || 'Not available'}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
+function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time}</p><p>📍 ${Number(o.lat).toFixed(5)}, ${Number(o.lng).toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation ?? 'Not available'}${o.slope ? ` • Slope: ${o.slope}` : ''}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
 function clearLayers(){observerLayer.clearLayers();objectLayer.clearLayers();allMarkers.length=0;}
 function renderData(data){
   clearLayers();
@@ -32,12 +34,25 @@ function renderData(data){
   document.getElementById('obsCount').textContent=(data.observations||[]).length;
   document.getElementById('messageCount').textContent=(data.messages||[]).length;
   document.getElementById('mediaCount').textContent=(data.media||[]).length;
+  window.chatMaplyObservations = data.observations || [];
   fit();
+  if (globeReady) renderGlobeObservations(window.chatMaplyObservations);
 }
 function fit(){if(allMarkers.length) map.fitBounds(L.featureGroup(allMarkers).getBounds().pad(0.18));}
 
 renderData({ ...demo, messages:[1,2,3,4,5,6], media:[1,2,3,4] });
 document.getElementById('fitMap').addEventListener('click',fit);
+
+const toggleGlobe = document.getElementById('toggleGlobe');
+if (toggleGlobe) toggleGlobe.addEventListener('click', async () => {
+  const mapEl = document.getElementById('map');
+  const globeEl = document.getElementById('globe');
+  const showing = !globeEl.hidden;
+  if (showing) { globeEl.hidden = true; mapEl.hidden = false; toggleGlobe.textContent = '3D Globe'; map.invalidateSize(); return; }
+  globeEl.hidden = false; mapEl.hidden = true; toggleGlobe.textContent = '2D Map';
+  if (!globeReady) { await initGlobe('globe'); globeReady = true; }
+  renderGlobeObservations(window.chatMaplyObservations || []);
+});
 
 // BUILD-04: explicit observer-location consent and browser/OS positioning.
 const locationBtn = document.getElementById('shareLocation');
