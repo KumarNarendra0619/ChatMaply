@@ -1,0 +1,37 @@
+name: ChatMaply Regression QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run deterministic parser and evidence QA
+        run: |
+          node tests/BUILD-28-parser-qa.js
+          node tests/BUILD-29-signal-qa.js
+          node tests/BUILD-30-messenger-qa.js
+          node tests/BUILD-31-e2e-import-qa.js
+          node tests/BUILD-32-evidence-model-qa.js
+
+      - name: Run terrain and persistence QA
+        run: |
+          node tests/BUILD-37-elevation-qa.js
+          node tests/BUILD-38-slope-qa.js
+          node tests/BUILD-51-pipeline-qa.js
+          node tests/BUILD-52-persistence-qa.js
+          node tests/BUILD-53-indexeddb-qa.js
+          node tests/e2e-chatmaply-pipeline-qa.js
