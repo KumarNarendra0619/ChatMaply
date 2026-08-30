@@ -1,4 +1,5 @@
 import { inspectChatZip } from './parsers/zip-import.js';
+import { requestObserverLocation, createObserverLocation } from './location/location-engine.js';
 
 const demo = {
   observers: [
@@ -21,7 +22,7 @@ const allMarkers = [];
 
 function observerIcon(){return L.divIcon({className:'custom-marker',html:'<div style="width:16px;height:16px;border-radius:50%;background:#2878c8;border:3px solid white;box-shadow:0 1px 5px #555"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
 function objectIcon(estimated=false){const c=estimated?'#d6a52b':'#d74c4c';return L.divIcon({className:'custom-marker',html:`<div style="width:17px;height:17px;border-radius:50%;background:${c};border:3px solid white;box-shadow:0 1px 5px #555"></div>`,iconSize:[17,17],iconAnchor:[8,8]});}
-function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time}</p><p>📍 ${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy} m</p><p>⛰️ Elevation: ${o.elevation || 'Not available'} • Slope: ${o.slope || 'Not available'}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
+function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time}</p><p>📍 ${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation || 'Not available'} • Slope: ${o.slope || 'Not available'}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
 function clearLayers(){observerLayer.clearLayers();objectLayer.clearLayers();allMarkers.length=0;}
 function renderData(data){
   clearLayers();
@@ -37,6 +38,31 @@ function fit(){if(allMarkers.length) map.fitBounds(L.featureGroup(allMarkers).ge
 
 renderData({ ...demo, messages:[1,2,3,4,5,6], media:[1,2,3,4] });
 document.getElementById('fitMap').addEventListener('click',fit);
+
+// BUILD-04: explicit observer-location consent and browser/OS positioning.
+const locationBtn = document.getElementById('shareLocation');
+if (locationBtn) {
+  locationBtn.addEventListener('click', () => {
+    const status = document.getElementById('locationStatus');
+    status.textContent = 'Requesting location permission…';
+    requestObserverLocation(location => {
+      const observer = createObserverLocation({ userId: 'current-user', groupId: 'current-group', location });
+      renderObserverLocation(observer);
+      status.textContent = `Location shared • ±${observer.accuracy_m ?? 'unknown'} m accuracy`;
+    }, error => {
+      status.textContent = error.code === 1 ? 'Location permission was not granted.' : `Location unavailable: ${error.message}`;
+    });
+  });
+}
+
+function renderObserverLocation(location) {
+  const marker = L.marker([location.latitude, location.longitude], {icon: observerIcon()})
+    .bindPopup(`<strong>My Observer Location</strong><br>Accuracy: ±${location.accuracy_m ?? 'unknown'} m<br>${new Date(location.timestamp).toLocaleString()}`)
+    .addTo(observerLayer);
+  allMarkers.push(marker);
+  map.setView([location.latitude, location.longitude], Math.max(map.getZoom(), 15));
+}
+
 const fileInput=document.getElementById('chatFile');
 const dropzone=document.getElementById('dropzone');
 const processBtn=document.getElementById('processBtn');
