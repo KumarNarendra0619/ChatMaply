@@ -1,0 +1,40 @@
+name: ChatMaply Browser E2E QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start static server
+        run: npx http-server . -p 4173 > /tmp/chatmaply-server.log 2>&1 &
+
+      - name: Run browser E2E QA
+        run: node tests/browser-e2e-runner.js
+
+      - name: Upload server log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatmaply-browser-e2e-server-log
+          path: /tmp/chatmaply-server.log
