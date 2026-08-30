@@ -1,0 +1,9 @@
+{
+  "name": "ChatMaply QA Telegram",
+  "type": "personal_chat",
+  "messages": [
+    {"id": 101, "type": "message", "date": "2026-08-31T09:20:00+05:30", "from": "Alice", "text": "Inspection point 30.3165, 78.0322"},
+    {"id": 102, "type": "message", "date": "2026-08-31T09:22:00+05:30", "from": "Bob", "text": "Road condition recorded", "file": "photos/IMG-0002.jpg"},
+    {"id": 103, "type": "message", "date": "2026-08-31T09:25:00+05:30", "from": "Alice", "text": "Follow-up required"}
+  ]
+}
