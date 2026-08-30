@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"id": "m-101", "timestamp_ms": 1788148800000, "sender_name": "Alice", "content": "Messenger inspection at 30.3165, 78.0322"},
+    {"id": "m-102", "timestamp_ms": 1788148920000, "sender_name": "Bob", "content": "Condition noted", "photos": ["IMG-0004.jpg"]},
+    {"id": "m-103", "timestamp_ms": 1788149100000, "sender_name": "Alice", "content": "Review pending"}
+  ]
+}
