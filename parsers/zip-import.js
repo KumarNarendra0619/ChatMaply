@@ -1,59 +1,6 @@
-// BUILD-27: browser-side ZIP import with explicit parser status and QA metadata.
+// BUILD-28 QA: browser-side ZIP import with deterministic parser detection.
 import { classifyMedia } from './common.js';
 import { parseWhatsApp } from './whatsapp.js';
 import { parseTelegramExport } from './telegram.js';
-
-const TEXT_NAMES = ['_chat.txt', 'chat.txt'];
-
-export async function inspectChatZip(file) {
-  if (!window.JSZip) throw new Error('ZIP library is not loaded.');
-  const zip = await window.JSZip.loadAsync(file);
-  const entries = Object.values(zip.files).filter(entry => !entry.dir);
-  const files = entries.map(entry => ({
-    path: entry.name,
-    name: entry.name.split('/').pop(),
-    mediaType: classifyMedia(entry.name),
-    size: entry._data?.uncompressedSize || 0
-  }));
-
-  const chatEntry = entries.find(entry => TEXT_NAMES.includes(entry.name.split('/').pop().toLowerCase()));
-  const jsonEntry = entries.find(entry => entry.name.toLowerCase().endsWith('.json') && /result|chat|export/.test(entry.name.toLowerCase()));
-  let messages = [];
-  let parser = 'none';
-  let parserStatus = 'NO_CHAT_DATA';
-
-  if (chatEntry) {
-    const text = await chatEntry.async('text');
-    messages = parseWhatsApp(text);
-    parser = 'whatsapp-txt';
-    parserStatus = messages.length ? 'PARSED' : 'NO_MESSAGES_MATCHED';
-  } else if (jsonEntry) {
-    try {
-      messages = parseTelegramExport(await jsonEntry.async('text'));
-      parser = 'telegram-json';
-      parserStatus = messages.length ? 'PARSED' : 'NO_MESSAGES_MATCHED';
-    } catch (error) {
-      parser = 'telegram-json';
-      parserStatus = 'INVALID_JSON';
-    }
-  }
-
-  return {
-    fileName: file.name,
-    totalFiles: files.length,
-    media: files.filter(f => f.mediaType === 'image' || f.mediaType === 'video'),
-    images: files.filter(f => f.mediaType === 'image'),
-    videos: files.filter(f => f.mediaType === 'video'),
-    messages,
-    files,
-    parser,
-    parser_status: parserStatus,
-    chat_file: chatEntry?.name || jsonEntry?.name || null,
-    qa: {
-      archive_readable: true,
-      message_count: messages.length,
-      media_count: files.filter(f => f.mediaType === 'image' || f.mediaType === 'video').length,
-      unsupported_files: files.filter(f => f.mediaType === 'other').length
-    }
-  };
-}
+const TEXT_NAMES=['_chat.txt','chat.txt'];
+export async function inspectChatZip(file){if(!file)throw new Error('No ZIP file selected.');if(!window.JSZip)throw new Error('ZIP library is not loaded.');const zip=await window.JSZip.loadAsync(file);const entries=Object.values(zip.files).filter(e=>!e.dir);const files=entries.map(e=>({path:e.name,name:e.name.split('/').pop(),mediaType:classifyMedia(e.name),size:e._data?.uncompressedSize||0}));const chatEntry=entries.find(e=>TEXT_NAMES.includes(e.name.split('/').pop().toLowerCase()));const jsonEntry=entries.find(e=>e.name.toLowerCase().endsWith('.json')&&/result|chat|export/.test(e.name.toLowerCase()));let messages=[],parser='none',parserStatus='NO_CHAT_DATA';if(chatEntry){messages=parseWhatsApp(await chatEntry.async('text'));parser='whatsapp-txt';parserStatus=messages.length?'PARSED':'NO_MESSAGES_MATCHED';}else if(jsonEntry){try{messages=parseTelegramExport(await jsonEntry.async('text'));parser='telegram-json';parserStatus=messages.length?'PARSED':'NO_MESSAGES_MATCHED';}catch(error){parser='telegram-json';parserStatus='INVALID_JSON';}}const media=files.filter(f=>f.mediaType==='image'||f.mediaType==='video');return{fileName:file.name,totalFiles:files.length,media,images:media.filter(f=>f.mediaType==='image'),videos:media.filter(f=>f.mediaType==='video'),messages,files,parser,parser_status:parserStatus,chat_file:chatEntry?.name||jsonEntry?.name||null,qa:{archive_readable:true,message_count:messages.length,media_count:media.length,unsupported_files:files.filter(f=>f.mediaType==='other').length}};}
