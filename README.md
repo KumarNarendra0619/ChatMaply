@@ -2,13 +2,19 @@
 
 **Group chats → simple, time- and location-aware maps.**
 
-ChatMaply is a lightweight browser-first prototype for turning exported community group conversations and their media into structured geographic observations. The system keeps **observer location** separate from **object/event location**, and preserves time, accuracy and evidence provenance.
+ChatMaply is a browser-first evidence-mapping prototype for turning exported community group conversations and their media into structured geographic observations. The system keeps **observer location** separate from **object/event location**, and preserves time, accuracy and evidence provenance.
 
-## Current build status
+## Current status — 2026-08-31
 
-- BUILD-01–BUILD-25: architecture and feature modules present in the repository.
-- BUILD-26: condition-assessment engine + UI + end-to-end save workflow integrated.
-- Prototype status: field-test ready for controlled sample exports; not yet a production service.
+- Core map, import, evidence, observation, review, condition, timeline and 2D/3D modules are present.
+- BUILD-27–32, BUILD-37–38 and BUILD-46, BUILD-51–53 have repository code and QA contracts.
+- Direct TXT/JSON/HTML import, durable active-dataset persistence, workspace/dataset session state, media EXIF normalization and browser E2E QA have been integrated.
+- GitHub Pages deployment workflow has completed successfully.
+- Browser E2E CI is being hardened against actual runtime failures.
+- Real production exports have **not** been claimed as validated; current platform fixtures are synthetic.
+- Status: **functional prototype / controlled field-test candidate**, not a production service.
+
+See [`docs/MASTER-STAGE-AUDIT.md`](docs/MASTER-STAGE-AUDIT.md) for the authoritative stage reconciliation.
 
 ## Core workflow
 
@@ -28,11 +34,13 @@ location       location
           ↓
 Accuracy + time + provenance
           ↓
-Condition assessment
+Human review / condition assessment
           ↓
 2D map + optional 3D globe
           ↓
 Timeline / evidence review
+          ↓
+Workspace / Dataset persistence
 ```
 
 ## Observer location
@@ -61,11 +69,9 @@ Observer coordinates are not silently copied to an object/event.
 
 An object/event location can be derived from explicit location evidence, media metadata, a defensible estimation method, or manual map placement followed by human confirmation. If none is available, the location remains **unknown**.
 
-Manual placement does **not** improve the underlying GPS accuracy. The original accuracy/provenance is retained.
+Manual placement does **not** improve the underlying GPS accuracy. Original accuracy and provenance are retained.
 
 ## Media evidence
-
-BUILD-25 links media to a specific observation while keeping location provenance explicit:
 
 ```text
 Media EXIF → Exact/embedded GPS evidence
@@ -74,44 +80,36 @@ Observer → Person/device location
 Unknown → No reliable location
 ```
 
-Media inspection is browser-side in the prototype. Real chat exports and private media must not be committed to GitHub.
+Media inspection is browser-side. Real chat exports and private media must not be committed to GitHub.
 
-## Condition assessment — BUILD-26
+## Condition assessment
 
-Human-reviewed condition records support common community field observations:
+Human-reviewed condition records support:
 
-- Waste site
-- Road
-- Water body
-- Drain
-- Building
-- Vegetation
-- Other
+`Waste site | Road | Water body | Drain | Building | Vegetation | Other`
 
 Condition levels:
 
-`Clean → Moderate → Poor → Critical → Unknown`
-
-Additional fields include quantity/size, obstruction, contamination, notes, reviewer and assessment time. The prototype does not claim that a visual label is automatically correct merely because an AI model proposes it.
+`Clean | Moderate | Poor | Critical | Unknown`
 
 ## Supported input targets
 
-The architecture targets exports from:
+The architecture targets:
 
 - WhatsApp
 - Telegram
 - Signal
 - Messenger
 
-Parser support varies by export format and must be validated against real sample exports before being described as production-ready.
+Parser support varies by export format. Real sanitized exports must pass QA before production support is claimed.
 
-## Run locally
+## QA
 
-No build system is required for the current static prototype. Serve the repository with a static web server and open `index.html`. A local server is preferable to opening the file directly because browser module and security policies vary by browser.
+Synthetic platform fixtures and browser E2E tests are included under `tests/`. The browser CI checks the actual UI, map runtime, synthetic import flow, timeline filtering and IndexedDB availability.
 
 ## Privacy and safety
 
-Exported chats can contain names, phone numbers, locations, images, videos and other sensitive information. Production deployment should:
+Exported chats can contain names, phone numbers, locations, images, videos and other sensitive information. ChatMaply should:
 
 1. Process locally where practical.
 2. Minimize retention.
@@ -124,7 +122,7 @@ Exported chats can contain names, phone numbers, locations, images, videos and o
 
 ChatMaply is an evidence-mapping tool, not a surveillance system. Facial recognition, identity inference, automatic person tracking and covert location collection are outside the current scope.
 
-Automatic object recognition, image geolocation, terrain measurement and condition classification should be treated as **candidate evidence** until validated and/or human-reviewed.
+Automatic object recognition, image geolocation, terrain measurement and condition classification are candidate evidence until validated and/or human-reviewed.
 
 ## License
 
