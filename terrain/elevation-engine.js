@@ -1,0 +1,6 @@
+// BUILD-37: deterministic elevation engine boundary.
+// No elevation is fabricated. A provider must explicitly return a value.
+const validCoord=(lat,lng)=>Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&Number(lat)>=-90&&Number(lat)<=90&&Number(lng)>=-180&&Number(lng)<=180;
+export function createElevationQuery({latitude,longitude,source='UNKNOWN'}={}){if(!validCoord(latitude,longitude))return{valid:false,error:'INVALID_COORDINATES'};return{valid:true,latitude:Number(latitude),longitude:Number(longitude),source:String(source).toUpperCase()};}
+export function normalizeElevationResult(result={}){const elevation=Number(result.elevation_m??result.elevation);return{elevation_m:Number.isFinite(elevation)?elevation:null,datum:result.datum??null,source:result.source??'UNKNOWN',resolution_m:Number.isFinite(Number(result.resolution_m))?Number(result.resolution_m):null,quality:result.quality??'UNKNOWN'};}
+export function attachElevation(observation={}, result={}){const q=createElevationQuery(observation);if(!q.valid)return{...observation,elevation_m:null,elevation_status:'INVALID_COORDINATES'};const e=normalizeElevationResult(result);return{...observation,elevation_m:e.elevation_m,elevation_datum:e.datum,elevation_source:e.source,elevation_resolution_m:e.resolution_m,elevation_quality:e.quality,elevation_status:e.elevation_m===null?'UNKNOWN':'DERIVED'};}
