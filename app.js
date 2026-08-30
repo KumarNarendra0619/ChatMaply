@@ -1,6 +1,8 @@
 import { inspectChatZip } from './parsers/zip-import.js';
 import { requestObserverLocation, createObserverLocation } from './location/location-engine.js';
 import { initGlobe, renderGlobeObservations } from './terrain/globe-view.js';
+import { ingestExport } from './data/evidence-store.js';
+import { buildObservations } from './data/observation-builder.js';
 
 const demo = {
   observers: [
@@ -21,87 +23,31 @@ const observerLayer = L.layerGroup().addTo(map);
 const objectLayer = L.layerGroup().addTo(map);
 const allMarkers = [];
 let globeReady = false;
-
 function observerIcon(){return L.divIcon({className:'custom-marker',html:'<div style="width:16px;height:16px;border-radius:50%;background:#2878c8;border:3px solid white;box-shadow:0 1px 5px #555"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
 function objectIcon(estimated=false){const c=estimated?'#d6a52b':'#d74c4c';return L.divIcon({className:'custom-marker',html:`<div style="width:17px;height:17px;border-radius:50%;background:${c};border:3px solid white;box-shadow:0 1px 5px #555"></div>`,iconSize:[17,17],iconAnchor:[8,8]});}
-function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time}</p><p>📍 ${Number(o.lat).toFixed(5)}, ${Number(o.lng).toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation ?? 'Not available'}${o.slope ? ` • Slope: ${o.slope}` : ''}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
+function showObservation(o){document.getElementById('observationCard').innerHTML=`<h3>Selected report</h3><div class="obs-title">${o.type}</div><p><strong>${o.id}</strong> • ${o.time || o.timestamp || ''}</p><p>📍 ${Number(o.lat ?? o.latitude).toFixed(5)}, ${Number(o.lng ?? o.longitude).toFixed(5)}</p><p>📏 Location accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m</p><p>⛰️ Elevation: ${o.elevation ?? o.terrain?.elevation_m ?? 'Not available'}${o.slope ? ` • Slope: ${o.slope}` : (o.terrain?.slope_deg != null ? ` • Slope: ${o.terrain.slope_deg.toFixed(1)}°` : '')}</p><p>↔ Distance from observer: ${o.distance || 'Not available'}</p><p>Evidence: ${o.evidence || 'Chat report'}</p><div class="chips"><span class="chip">${o.confidence || 'Unverified'}</span><span class="chip">Object / event</span></div>`;}
 function clearLayers(){observerLayer.clearLayers();objectLayer.clearLayers();allMarkers.length=0;}
 function renderData(data){
   clearLayers();
-  (data.observers || []).forEach(u=>{const marker=L.marker([u.lat,u.lng],{icon:observerIcon()}).bindPopup(`<strong>Observer</strong><br>${u.name}<br>Accuracy: ±${u.accuracy ?? 'unknown'} m<br>${u.time || ''}`);marker.addTo(observerLayer);allMarkers.push(marker);});
-  (data.observations || []).forEach(o=>{const marker=L.marker([o.lat,o.lng],{icon:objectIcon(o.confidence==='Estimated')}).on('click',()=>showObservation(o)).bindPopup(`<strong>${o.type}</strong><br>${o.time || ''}<br>Accuracy: ±${o.accuracy ?? 'unknown'} m`);marker.addTo(objectLayer);allMarkers.push(marker);});
+  (data.observers || []).forEach(u=>{const marker=L.marker([u.lat,u.lng],{icon:observerIcon()}).bindPopup(`<strong>Observer</strong><br>${u.name || 'Observer'}<br>Accuracy: ±${u.accuracy ?? u.accuracy_m ?? 'unknown'} m<br>${u.time || u.timestamp || ''}`);marker.addTo(observerLayer);allMarkers.push(marker);});
+  (data.observations || []).forEach(o=>{const lat=o.lat ?? o.latitude, lng=o.lng ?? o.longitude; if(!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return; const marker=L.marker([lat,lng],{icon:objectIcon(o.confidence==='Estimated')}).on('click',()=>showObservation(o)).bindPopup(`<strong>${o.type || 'Observation'}</strong><br>${o.time || o.timestamp || ''}<br>Accuracy: ±${o.accuracy ?? o.accuracy_m ?? 'unknown'} m`);marker.addTo(objectLayer);allMarkers.push(marker);});
   document.getElementById('observerCount').textContent=(data.observers||[]).length;
   document.getElementById('obsCount').textContent=(data.observations||[]).length;
   document.getElementById('messageCount').textContent=(data.messages||[]).length;
   document.getElementById('mediaCount').textContent=(data.media||[]).length;
   window.chatMaplyObservations = data.observations || [];
-  fit();
-  if (globeReady) renderGlobeObservations(window.chatMaplyObservations);
+  fit(); if(globeReady) renderGlobeObservations(window.chatMaplyObservations);
 }
 function fit(){if(allMarkers.length) map.fitBounds(L.featureGroup(allMarkers).getBounds().pad(0.18));}
-
 renderData({ ...demo, messages:[1,2,3,4,5,6], media:[1,2,3,4] });
 document.getElementById('fitMap').addEventListener('click',fit);
-
-const toggleGlobe = document.getElementById('toggleGlobe');
-if (toggleGlobe) toggleGlobe.addEventListener('click', async () => {
-  const mapEl = document.getElementById('map');
-  const globeEl = document.getElementById('globe');
-  const showing = !globeEl.hidden;
-  if (showing) { globeEl.hidden = true; mapEl.hidden = false; toggleGlobe.textContent = '3D Globe'; map.invalidateSize(); return; }
-  globeEl.hidden = false; mapEl.hidden = true; toggleGlobe.textContent = '2D Map';
-  if (!globeReady) { await initGlobe('globe'); globeReady = true; }
-  renderGlobeObservations(window.chatMaplyObservations || []);
-});
-
-// BUILD-04: explicit observer-location consent and browser/OS positioning.
-const locationBtn = document.getElementById('shareLocation');
-if (locationBtn) {
-  locationBtn.addEventListener('click', () => {
-    const status = document.getElementById('locationStatus');
-    status.textContent = 'Requesting location permission…';
-    requestObserverLocation(location => {
-      const observer = createObserverLocation({ userId: 'current-user', groupId: 'current-group', location });
-      renderObserverLocation(observer);
-      status.textContent = `Location shared • ±${observer.accuracy_m ?? 'unknown'} m accuracy`;
-    }, error => {
-      status.textContent = error.code === 1 ? 'Location permission was not granted.' : `Location unavailable: ${error.message}`;
-    });
-  });
-}
-
-function renderObserverLocation(location) {
-  const marker = L.marker([location.latitude, location.longitude], {icon: observerIcon()})
-    .bindPopup(`<strong>My Observer Location</strong><br>Accuracy: ±${location.accuracy_m ?? 'unknown'} m<br>${new Date(location.timestamp).toLocaleString()}`)
-    .addTo(observerLayer);
-  allMarkers.push(marker);
-  map.setView([location.latitude, location.longitude], Math.max(map.getZoom(), 15));
-}
-
-const fileInput=document.getElementById('chatFile');
-const dropzone=document.getElementById('dropzone');
-const processBtn=document.getElementById('processBtn');
-const fileRow=document.getElementById('fileRow');
-const fileName=document.getElementById('fileName');
-let selectedFile=null;
+const toggleGlobe=document.getElementById('toggleGlobe');
+if(toggleGlobe) toggleGlobe.addEventListener('click',async()=>{const mapEl=document.getElementById('map'),globeEl=document.getElementById('globe'),showing=!globeEl.hidden;if(showing){globeEl.hidden=true;mapEl.hidden=false;toggleGlobe.textContent='3D Globe';map.invalidateSize();return;}globeEl.hidden=false;mapEl.hidden=true;toggleGlobe.textContent='2D Map';if(!globeReady){await initGlobe('globe');globeReady=true;}renderGlobeObservations(window.chatMaplyObservations||[]);});
+const locationBtn=document.getElementById('shareLocation');
+if(locationBtn) locationBtn.addEventListener('click',()=>{const status=document.getElementById('locationStatus');status.textContent='Requesting location permission…';requestObserverLocation(location=>{const observer=createObserverLocation({userId:'current-user',groupId:'current-group',location});renderObserverLocation(observer);status.textContent=`Location shared • ±${observer.accuracy_m ?? 'unknown'} m accuracy`;},error=>{status.textContent=error.code===1?'Location permission was not granted.':`Location unavailable: ${error.message}`;});});
+function renderObserverLocation(location){const marker=L.marker([location.latitude,location.longitude],{icon:observerIcon()}).bindPopup(`<strong>My Observer Location</strong><br>Accuracy: ±${location.accuracy_m ?? 'unknown'} m<br>${new Date(location.timestamp).toLocaleString()}`).addTo(observerLayer);allMarkers.push(marker);map.setView([location.latitude,location.longitude],Math.max(map.getZoom(),15));}
+const fileInput=document.getElementById('chatFile'),dropzone=document.getElementById('dropzone'),processBtn=document.getElementById('processBtn'),fileRow=document.getElementById('fileRow'),fileName=document.getElementById('fileName');let selectedFile=null;
 function selectFile(file){selectedFile=file||null;if(!selectedFile){fileRow.hidden=true;processBtn.disabled=true;return;}fileName.textContent=`${selectedFile.name} (${Math.max(1,Math.round(selectedFile.size/1024))} KB)`;fileRow.hidden=false;processBtn.disabled=false;}
-fileInput.addEventListener('change',e=>selectFile(e.target.files[0]));
-dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.style.borderColor='var(--accent)'});
-dropzone.addEventListener('dragleave',()=>dropzone.style.borderColor='');
-dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.style.borderColor='';selectFile(e.dataTransfer.files[0]);});
-document.getElementById('clearFile').addEventListener('click',()=>{fileInput.value='';selectFile(null)});
-
-processBtn.addEventListener('click',async()=>{
-  if(!selectedFile)return;
-  processBtn.disabled=true;processBtn.textContent='Processing…';
-  const status=document.getElementById('statusText');status.textContent='Reading chat export locally…';
-  try {
-    const result=selectedFile.name.toLowerCase().endsWith('.zip') ? await inspectChatZip(selectedFile) : {fileName:selectedFile.name,totalFiles:1,media:[],images:[],videos:[],messages:[]};
-    renderData({observers:[],observations:[],messages:result.messages,media:result.media});
-    status.textContent=`Imported ${result.messages.length} messages and ${result.media.length} media files from ${result.fileName}. No locations were invented.`;
-    processBtn.textContent='Processed';
-  } catch (error) {
-    console.error(error);status.textContent=`Could not process this export: ${error.message}`;processBtn.textContent='Try again';processBtn.disabled=false;
-  }
-});
+fileInput.addEventListener('change',e=>selectFile(e.target.files[0]));dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.style.borderColor='var(--accent)'});dropzone.addEventListener('dragleave',()=>dropzone.style.borderColor='');dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.style.borderColor='';selectFile(e.dataTransfer.files[0]);});document.getElementById('clearFile').addEventListener('click',()=>{fileInput.value='';selectFile(null)});
+processBtn.addEventListener('click',async()=>{if(!selectedFile)return;processBtn.disabled=true;processBtn.textContent='Processing…';const status=document.getElementById('statusText');status.textContent='Reading chat export locally…';try{const result=selectedFile.name.toLowerCase().endsWith('.zip')?await inspectChatZip(selectedFile):{fileName:selectedFile.name,totalFiles:1,media:[],images:[],videos:[],messages:[]};const observations=buildObservations(result);const stored=ingestExport({...result,observations});renderData(stored);status.textContent=`Imported ${stored.messages.length} messages and ${stored.media.length} media files; ${stored.observations.length} evidence locations mapped. No locations were invented.`;processBtn.textContent='Processed';}catch(error){console.error(error);status.textContent=`Could not process this export: ${error.message}`;processBtn.textContent='Try again';processBtn.disabled=false;}});
 document.getElementById('timeRange').addEventListener('input',e=>{document.getElementById('timeValue').textContent=e.target.value==='100'?'All':`${e.target.value}% of time range`;});
