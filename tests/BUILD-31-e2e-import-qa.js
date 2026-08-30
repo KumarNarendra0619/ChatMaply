@@ -1,0 +1,5 @@
+// BUILD-31: deterministic end-to-end import QA contract.
+import { buildObservations, auditObservations } from '../data/observation-builder.js';
+const fixture={messages:[{id:'m1',sender:'Village User',text:'Waste site reported',timestamp:'2026-08-31T10:00:00Z',latitude:30.1,longitude:78.2,accuracy_m:12,source:'message'}],media:[{id:'img1',type:'image',latitude:30.101,longitude:78.201,accuracy_m:5,timestamp:'2026-08-31T10:01:00Z',source:'EXIF'}]};
+const observations=buildObservations(fixture);const audit=auditObservations(observations);
+export function runBuild31QA(){const checks=[['message observation',observations.some(o=>o.id==='msg-m1')],['media observation',observations.some(o=>o.id==='media-img1')],['coordinates preserved',observations.every(o=>Number.isFinite(o.latitude)&&Number.isFinite(o.longitude))],['provenance preserved',observations.every(o=>o.source)],['audit passes',audit.failed===0]];return{total:checks.length,passed:checks.filter(x=>x[1]).length,failed:checks.filter(x=>!x[1]).length,checks};}
