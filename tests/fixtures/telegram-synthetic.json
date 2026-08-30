@@ -1,0 +1,8 @@
+{
+  "name": "Synthetic Village Group",
+  "messages": [
+    {"id": 1, "type": "message", "date": "2026-08-30T08:42:00", "from": "Ramesh", "text": "Waste near drain"},
+    {"id": 2, "type": "service", "date": "2026-08-30T08:43:00", "text": "ignored"},
+    {"id": 3, "type": "message", "date": "not-a-date", "from": "Sita", "text": [{"text": "Photo evidence"}], "photo": "photos/3.jpg"}
+  ]
+}
