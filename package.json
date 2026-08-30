@@ -1,0 +1,12 @@
+{
+  "name": "chatmaply",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qa:browser": "node tests/browser-e2e-runner.js"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "playwright": "^1.55.0"
+  }
+}
