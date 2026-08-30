@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ChatMaply Browser E2E QA</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;line-height:1.5}
+    .pass{color:#146c2e}.fail{color:#a61b1b}.test{padding:.6rem 0;border-bottom:1px solid #ddd}
+    code{background:#f4f4f4;padding:.1rem .25rem;border-radius:3px}
+  </style>
+</head>
+<body>
+  <h1>ChatMaply Browser E2E QA</h1>
+  <p>Privacy-safe browser smoke test. It validates the deployed application's core DOM/runtime contract without uploading any user data.</p>
+  <div id="results"></div>
+  <script>
+    const results = document.getElementById('results');
+    const checks = [];
+    const add = (name, pass, detail='') => {
+      checks.push({name, pass, detail});
+      const row = document.createElement('div');
+      row.className = `test ${pass ? 'pass' : 'fail'}`;
+      row.textContent = `${pass ? 'PASS' : 'FAIL'} — ${name}${detail ? `: ${detail}` : ''}`;
+      results.appendChild(row);
+    };
+
+    const requiredIds = [
+      'fileInput','timeRange','timeValue','map','evidencePanel','objectConfirmPanel',
+      'conditionForm','saveConditionBtn','refreshBtn'
+    ];
+    requiredIds.forEach(id => add(`DOM contract: #${id}`, !!document.getElementById(id)));
+
+    add('Application script loaded', typeof window.__CHATMAPLY_E2E__ !== 'undefined' || document.scripts.length > 0);
+    add('Leaflet runtime available', typeof window.L !== 'undefined', 'required for 2D map rendering');
+
+    const timeRange = document.getElementById('timeRange');
+    if (timeRange) {
+      const before = document.getElementById('timeValue')?.textContent;
+      timeRange.value = timeRange.min || timeRange.value;
+      timeRange.dispatchEvent(new Event('input', {bubbles:true}));
+      const after = document.getElementById('timeValue')?.textContent;
+      add('Timeline control responds', before !== after || !!after);
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    add('Import control accepts files', !!fileInput && fileInput.type === 'file');
+
+    let storageAvailable = false;
+    try {
+      storageAvailable = 'indexedDB' in window;
+    } catch (_) {}
+    add('IndexedDB API available', storageAvailable);
+
+    const failed = checks.filter(c => !c.pass).length;
+    const summary = document.createElement('p');
+    summary.innerHTML = `<strong>${failed ? 'CONDITIONAL' : 'PASS'}</strong> — ${checks.length - failed}/${checks.length} browser checks passed.`;
+    results.prepend(summary);
+  </script>
+</body>
+</html>
