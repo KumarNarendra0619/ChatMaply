@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"id": "s-101", "timestamp": "2026-08-31T09:30:00+05:30", "sender": "Alice", "text": "Signal inspection at 30.3165, 78.0322"},
+    {"id": "s-102", "timestamp": "2026-08-31T09:32:00+05:30", "sender": "Bob", "text": "Condition noted", "media": "IMG-0003.jpg"},
+    {"id": "s-103", "timestamp": "2026-08-31T09:35:00+05:30", "sender": "Alice", "text": "Review pending"}
+  ]
+}
