@@ -9,79 +9,25 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span class="brand-mark">⌖</span><span>ChatMaply</span></div>
-    <div class="tagline">Group chats → simple maps</div>
-  </header>
-
+  <header class="topbar"><div class="brand"><span class="brand-mark">⌖</span><span>ChatMaply</span></div><div class="tagline">Group chats → simple maps</div></header>
   <main class="container">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">BUILD-01 • FOUNDATION</p>
-        <h1>Turn a group chat into a map.</h1>
-        <p class="lead">Upload an exported chat with its media. ChatMaply identifies messages, people, dates, images and videos, then prepares them for location-aware mapping.</p>
-      </div>
-      <div class="privacy-note"><strong>Privacy first</strong><br>Files are processed locally in this prototype. Nothing is uploaded by this page.</div>
-    </section>
-
+    <section class="hero"><div><p class="eyebrow">BUILD-03 • CHAT + MEDIA IMPORT</p><h1>Turn a group chat into a map.</h1><p class="lead">Upload an exported chat with its media. ChatMaply reads messages, people, dates, images and videos in your browser.</p></div><div class="privacy-note"><strong>Privacy first</strong><br>BUILD-03 processes the ZIP locally in your browser. The prototype does not send chat files to a server.</div></section>
     <section class="upload-card" aria-labelledby="upload-title">
-      <h2 id="upload-title">1. Upload exported group chat</h2>
-      <p class="muted">For the best result, export the chat <strong>with media</strong>.</p>
-      <label class="dropzone" id="dropzone" for="chatFile">
-        <input id="chatFile" type="file" accept=".zip,.txt,.json,.html" hidden>
-        <span class="upload-icon">↑</span>
-        <strong>Choose chat export</strong>
-        <span>ZIP, TXT, JSON or HTML</span>
-      </label>
-      <div class="file-row" id="fileRow" hidden>
-        <span id="fileName"></span><button class="text-button" id="clearFile">Remove</button>
-      </div>
+      <h2 id="upload-title">1. Upload exported group chat</h2><p class="muted">For the best result, export the chat <strong>with media</strong>.</p>
+      <label class="dropzone" id="dropzone" for="chatFile"><input id="chatFile" type="file" accept=".zip,.txt,.json,.html" hidden><span class="upload-icon">↑</span><strong>Choose chat export</strong><span>ZIP, TXT, JSON or HTML</span></label>
+      <div class="file-row" id="fileRow" hidden><span id="fileName"></span><button class="text-button" id="clearFile">Remove</button></div>
       <button class="primary" id="processBtn" disabled>Process chat</button>
-      <p class="help">Supported formats are added progressively. BUILD-01 currently provides a safe parser foundation and demo map.</p>
+      <p class="help">BUILD-03: ZIP inspection and WhatsApp TXT / Telegram JSON parsing are active. Signal and Messenger adapters are not claimed until tested against real exports.</p>
     </section>
-
     <section class="workspace" aria-label="ChatMaply map workspace">
-      <div class="map-panel">
-        <div class="panel-head"><div><h2>2. Map</h2><span id="statusText">Demo observations are shown until a chat is processed.</span></div><button class="secondary" id="fitMap">Fit observations</button></div>
-        <div id="map"></div>
-      </div>
-      <aside class="side-panel">
-        <div class="stats">
-          <div><strong id="messageCount">6</strong><span>Messages</span></div>
-          <div><strong id="mediaCount">4</strong><span>Media</span></div>
-          <div><strong id="observerCount">3</strong><span>Observers</span></div>
-          <div><strong id="obsCount">3</strong><span>Mapped reports</span></div>
-        </div>
-        <div class="legend">
-          <h3>Map legend</h3>
-          <p><span class="dot observer"></span> Observer location</p>
-          <p><span class="dot object"></span> Object / event</p>
-          <p><span class="dot estimated"></span> Estimated location</p>
-        </div>
-        <div class="timeline">
-          <h3>Time</h3>
-          <input id="timeRange" type="range" min="0" max="100" value="100">
-          <div class="time-labels"><span>Earlier</span><span id="timeValue">All</span><span>Latest</span></div>
-        </div>
-        <div class="observation" id="observationCard">
-          <h3>Selected report</h3>
-          <p class="muted">Click a map marker to view evidence.</p>
-        </div>
-      </aside>
+      <div class="map-panel"><div class="panel-head"><div><h2>2. Map</h2><span id="statusText">Demo observations are shown until a chat is processed.</span></div><button class="secondary" id="fitMap">Fit observations</button></div><div id="map"></div></div>
+      <aside class="side-panel"><div class="stats"><div><strong id="messageCount">6</strong><span>Messages</span></div><div><strong id="mediaCount">4</strong><span>Media</span></div><div><strong id="observerCount">3</strong><span>Observers</span></div><div><strong id="obsCount">3</strong><span>Mapped reports</span></div></div><div class="legend"><h3>Map legend</h3><p><span class="dot observer"></span> Observer location</p><p><span class="dot object"></span> Object / event</p><p><span class="dot estimated"></span> Estimated location</p></div><div class="timeline"><h3>Time</h3><input id="timeRange" type="range" min="0" max="100" value="100"><div class="time-labels"><span>Earlier</span><span id="timeValue">All</span><span>Latest</span></div></div><div class="observation" id="observationCard"><h3>Selected report</h3><p class="muted">Click a map marker to view evidence.</p></div></aside>
     </section>
-
-    <section class="how-it-works">
-      <h2>How ChatMaply works</h2>
-      <div class="steps">
-        <div><b>01</b><h3>Export</h3><p>Export a group chat from your messaging app with media.</p></div>
-        <div><b>02</b><h3>Process</h3><p>ChatMaply reads sender, text, media and timestamps.</p></div>
-        <div><b>03</b><h3>Map</h3><p>Observer and object/event locations are kept as separate records.</p></div>
-      </div>
-    </section>
+    <section class="how-it-works"><h2>How ChatMaply works</h2><div class="steps"><div><b>01</b><h3>Export</h3><p>Export a group chat from your messaging app with media.</p></div><div><b>02</b><h3>Process</h3><p>ChatMaply reads the export locally and builds a normalized message/media inventory.</p></div><div><b>03</b><h3>Map</h3><p>Observer and object/event locations remain separate records.</p></div></div></section>
   </main>
-
-  <footer>ChatMaply • BUILD-01 • Prototype</footer>
+  <footer>ChatMaply • BUILD-03 • Prototype</footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
