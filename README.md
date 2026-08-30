@@ -2,52 +2,40 @@
 
 **Group chats → simple, time- and location-aware maps.**
 
-ChatMaply is a lightweight prototype for turning exported community group conversations and their media into structured geographic observations. The project keeps **observer location** separate from **object/event location**, and preserves time and location accuracy.
+ChatMaply is a lightweight browser-first prototype for turning exported community group conversations and their media into structured geographic observations. The system keeps **observer location** separate from **object/event location**, and preserves time, accuracy and evidence provenance.
 
-## BUILD-01
+## Current build status
 
-Current prototype includes:
+- BUILD-01–BUILD-25: architecture and feature modules present in the repository.
+- BUILD-26: condition-assessment engine + UI + end-to-end save workflow integrated.
+- Prototype status: field-test ready for controlled sample exports; not yet a production service.
 
-- Simple village-friendly web interface
-- Exported chat upload foundation
-- Demo interactive OpenStreetMap map
-- Observer and object/event markers
-- Time slider UI
-- Accuracy, elevation and slope fields in the observation model
-- Privacy-first local-processing direction
-
-### Supported input targets
-
-- WhatsApp exported chat
-- Telegram exported chat
-- Signal exported chat
-- Messenger exported chat
-
-Parser support is being implemented progressively; BUILD-01 is the foundation, not a claim of complete parsing for every export variant.
-
-## Run locally
-
-No build system is required for the current static prototype. Open `index.html` in a modern browser, or serve the repository with any static web server.
-
-## Core concept
+## Core workflow
 
 ```text
 Export group chat + media
         ↓
-ChatMaply parser
+Local parser
         ↓
 Messages + media + sender + time
         ↓
-Observer location
-        ↓
-Object / event location
-        ↓
-Accuracy + time
-        ↓
-Interactive map
+Location evidence
+   ┌────┴──────────┐
+Observer       Object/Event
+location       location
+   │                │
+   └──────┬─────────┘
+          ↓
+Accuracy + time + provenance
+          ↓
+Condition assessment
+          ↓
+2D map + optional 3D globe
+          ↓
+Timeline / evidence review
 ```
 
-### Observer location
+## Observer location
 
 ```text
 User joins Group
@@ -65,30 +53,78 @@ Observer Location
 Map marker
 ```
 
-## Important design rule
+Observer coordinates are not silently copied to an object/event.
+
+## Object location rule
 
 `Observer Location ≠ Object Location`
 
-If an object's location cannot be supported by GPS, explicit place information, manual placement or a defensible estimation method, the object location remains **unknown** rather than being assigned the observer's coordinates.
+An object/event location can be derived from explicit location evidence, media metadata, a defensible estimation method, or manual map placement followed by human confirmation. If none is available, the location remains **unknown**.
 
-## Planned builds
+Manual placement does **not** improve the underlying GPS accuracy. The original accuracy/provenance is retained.
 
-1. **BUILD-01** — Foundation + upload + map
-2. **BUILD-02** — Chat/media parsers + metadata
-3. **BUILD-03** — Observer/object location workflow
-4. **BUILD-04** — Accuracy + time model
-5. **BUILD-05** — Elevation + slope + terrain context
-6. **BUILD-06** — Waste/object condition AI
-7. **BUILD-07** — Timeline + change monitoring
-8. **BUILD-08** — Deployment + documentation
+## Media evidence
 
-## Primary demonstration
+BUILD-25 links media to a specific observation while keeping location provenance explicit:
 
-The first field demonstration is **village waste and environmental observation**. The same observation engine can later support road damage, water pollution, landslide, flood and other community-reported events.
+```text
+Media EXIF → Exact/embedded GPS evidence
+Observation → Object-location evidence
+Observer → Person/device location
+Unknown → No reliable location
+```
 
-## Privacy
+Media inspection is browser-side in the prototype. Real chat exports and private media must not be committed to GitHub.
 
-Exported chats can contain sensitive personal information. The production version should process locally where practical, minimize retention, avoid exposing observer locations by default, and require explicit consent before associating a user's location with a group.
+## Condition assessment — BUILD-26
+
+Human-reviewed condition records support common community field observations:
+
+- Waste site
+- Road
+- Water body
+- Drain
+- Building
+- Vegetation
+- Other
+
+Condition levels:
+
+`Clean → Moderate → Poor → Critical → Unknown`
+
+Additional fields include quantity/size, obstruction, contamination, notes, reviewer and assessment time. The prototype does not claim that a visual label is automatically correct merely because an AI model proposes it.
+
+## Supported input targets
+
+The architecture targets exports from:
+
+- WhatsApp
+- Telegram
+- Signal
+- Messenger
+
+Parser support varies by export format and must be validated against real sample exports before being described as production-ready.
+
+## Run locally
+
+No build system is required for the current static prototype. Serve the repository with a static web server and open `index.html`. A local server is preferable to opening the file directly because browser module and security policies vary by browser.
+
+## Privacy and safety
+
+Exported chats can contain names, phone numbers, locations, images, videos and other sensitive information. Production deployment should:
+
+1. Process locally where practical.
+2. Minimize retention.
+3. Keep observer and object locations as separate data classes.
+4. Require explicit consent before collecting observer location.
+5. Avoid publishing precise personal locations by default.
+6. Never commit real chat exports, credentials, tokens or private media to the repository.
+
+## Scope boundary
+
+ChatMaply is an evidence-mapping tool, not a surveillance system. Facial recognition, identity inference, automatic person tracking and covert location collection are outside the current scope.
+
+Automatic object recognition, image geolocation, terrain measurement and condition classification should be treated as **candidate evidence** until validated and/or human-reviewed.
 
 ## License
 
