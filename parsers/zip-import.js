@@ -1,5 +1,4 @@
-// BUILD-03 browser-side ZIP import utilities.
-// Uses JSZip from the CDN loaded by index.html.
+// BUILD-27: browser-side ZIP import with explicit parser status and QA metadata.
 import { classifyMedia } from './common.js';
 import { parseWhatsApp } from './whatsapp.js';
 import { parseTelegramExport } from './telegram.js';
@@ -18,13 +17,25 @@ export async function inspectChatZip(file) {
   }));
 
   const chatEntry = entries.find(entry => TEXT_NAMES.includes(entry.name.split('/').pop().toLowerCase()));
+  const jsonEntry = entries.find(entry => entry.name.toLowerCase().endsWith('.json') && /result|chat|export/.test(entry.name.toLowerCase()));
   let messages = [];
+  let parser = 'none';
+  let parserStatus = 'NO_CHAT_DATA';
+
   if (chatEntry) {
     const text = await chatEntry.async('text');
     messages = parseWhatsApp(text);
-  } else {
-    const jsonEntry = entries.find(entry => entry.name.toLowerCase().endsWith('.json') && /result|chat|export/.test(entry.name.toLowerCase()));
-    if (jsonEntry) messages = parseTelegramExport(await jsonEntry.async('text'));
+    parser = 'whatsapp-txt';
+    parserStatus = messages.length ? 'PARSED' : 'NO_MESSAGES_MATCHED';
+  } else if (jsonEntry) {
+    try {
+      messages = parseTelegramExport(await jsonEntry.async('text'));
+      parser = 'telegram-json';
+      parserStatus = messages.length ? 'PARSED' : 'NO_MESSAGES_MATCHED';
+    } catch (error) {
+      parser = 'telegram-json';
+      parserStatus = 'INVALID_JSON';
+    }
   }
 
   return {
@@ -34,6 +45,15 @@ export async function inspectChatZip(file) {
     images: files.filter(f => f.mediaType === 'image'),
     videos: files.filter(f => f.mediaType === 'video'),
     messages,
-    files
+    files,
+    parser,
+    parser_status: parserStatus,
+    chat_file: chatEntry?.name || jsonEntry?.name || null,
+    qa: {
+      archive_readable: true,
+      message_count: messages.length,
+      media_count: files.filter(f => f.mediaType === 'image' || f.mediaType === 'video').length,
+      unsupported_files: files.filter(f => f.mediaType === 'other').length
+    }
   };
 }
